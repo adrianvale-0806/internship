@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C++ 运行时多态：vptr / vtable 交互实验</title>
+<style>
+:root{color-scheme:light;--ink:#17223b;--muted:#61718c;--bg:#f6f8fe;--surface:#fff;--line:#dce4f1;--blue:#426ee6;--dog:#07865c;--cat:#b27616;--animal:#6973a1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink);line-height:1.65;font-size:14px}
+.wrap{max-width:1050px;margin:0 auto;padding:24px 18px 44px}.hero{border-radius:22px;background:linear-gradient(122deg,#172853,#263a78 68%,#275976);color:white;padding:23px 27px;box-shadow:0 12px 30px rgba(38,61,120,.13)}
+.eyebrow{color:#a4dfff;letter-spacing:.08em;font-weight:700;font-size:12px}.hero h1{font-size:clamp(22px,3.7vw,34px);line-height:1.28;margin:8px 0}.hero p{margin:6px 0 0;color:#d6e6ff}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin:19px 0}.nav button,.chooser button,.actions button,.quiz button{font:inherit;cursor:pointer;border:1px solid var(--line);background:white;color:var(--ink);border-radius:10px;padding:9px 15px;transition:.15s}
+.nav button[aria-selected=true]{background:var(--blue);color:#fff;border-color:var(--blue)}.nav button:focus-visible,.chooser button:focus-visible,.actions button:focus-visible,.quiz button:focus-visible{outline:3px solid #8cb4ff;outline-offset:2px}
+.panel{display:none}.panel.active{display:block}.card{border:1px solid var(--line);background:var(--surface);border-radius:17px;padding:18px 19px;margin:13px 0;box-shadow:0 6px 20px rgba(36,54,92,.04)}
+h2{font-size:19px;margin:0 0 11px}h3{font-size:15px;margin:0 0 9px}.sub{color:var(--muted);margin:4px 0 15px}.chooser,.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chooser button.active{color:#fff;background:#1a356b;border-color:#1a356b}
+.code{font:13px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;background:#18253e;color:#dbebff;border-radius:12px;padding:11px 15px;overflow-wrap:anywhere;margin:13px 0;white-space:pre-wrap}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.42fr);gap:14px;align-items:stretch}
+.box{border:2px solid var(--line);border-radius:13px;overflow:hidden;background:white}.box .hd{font-weight:750;background:#edf2fa;padding:9px 12px}.cell{padding:8px 12px;border-top:1px solid var(--line)}.cell small{color:var(--muted)}.box.live{border-color:var(--blue);box-shadow:0 0 0 3px rgba(66,110,230,.08)}.box.live .hd{background:#e2eaff}
+.vtables{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.vt{border:2px solid var(--line);border-radius:12px;overflow:hidden;opacity:.48;transition:.15s}.vt.on{opacity:1;box-shadow:0 0 0 2px rgba(66,110,230,.08);border-color:#5578d7}.vt .label{font-size:13px;font-weight:800;background:#eef2fc;padding:7px 9px}.vt .slot{border-top:1px solid var(--line);font-size:12px;padding:9px 8px;word-break:break-word}.slot strong{display:block;color:#345dcc}.arrow{font-size:23px;text-align:center;color:var(--blue);line-height:1}.highlight{background:#e3ecff;border:1px solid #a4bcff;padding:10px 13px;border-radius:11px;font-weight:700}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:15px 0}.step{padding:9px 4px;text-align:center;border-radius:8px;background:#e9edf6;color:#69758f;font-size:12px}.step.done{background:#dfeaff;color:#3654a2}.step.current{background:#375ed6;color:#fff;font-weight:700}.detail{min-height:98px;padding:15px;background:#f0f5ff;border-left:4px solid var(--blue);border-radius:10px;margin:12px 0}.actions button.primary{background:#345fdf;border-color:#345fdf;color:#fff}.actions button:disabled{opacity:.37;cursor:default}.metric{display:inline-block;background:#e8f0ff;border-radius:8px;padding:2px 8px;color:#2c52ad;font-weight:700}
+.object-row{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);gap:7px;margin:8px 0;align-items:center}.object{padding:12px;border:1px solid #b9c8e6;border-radius:10px;background:#f8fbff}.object em{font-style:normal;font-size:12px;color:var(--muted)}.dog{border-color:#8acdb2;background:#f1fff8}.cat{border-color:#e8c887;background:#fffaee}.arrowH{text-align:center;color:var(--blue);font-size:22px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border-radius:11px;background:#eff6ff;padding:12px 15px;margin-top:11px}.warning{background:#fff8e8;color:#785b24}.quiz button{margin:4px}.quiz button.yes{background:#ecfff3;border-color:#31aa72}.quiz button.no{background:#fff0f0;border-color:#d65b5b}#quizFeedback{font-weight:650;padding:9px 0;min-height:26px}
+.small{font-size:12px;color:var(--muted)}.pill{background:#e9f2fa;border-radius:100px;padding:3px 9px;font-size:12px;color:#3c5b80}.success{color:var(--dog);font-weight:800}
+@media(max-width:650px){.wrap{padding:12px 9px 25px}.hero{padding:18px}.card{padding:15px 12px}.grid,.two{grid-template-columns:1fr}.vtables{grid-template-columns:1fr}.vt{opacity:1}.steps{grid-template-columns:repeat(5,1fr)}.step{font-size:10px;padding:8px 2px}.nav button{padding:8px 10px}}
+</style>
+</head>
+<body><main class="wrap">
+<header class="hero"><div class="eyebrow">C++ 面试八股 · 可交互心智模型</div><h1>运行时多态：编译期定槽位，运行时选表</h1>
+<p>亲手切换 Dog / Cat，沿着 <b>对象 → vptr → vtable → 虚函数槽位 → 实际函数</b> 走一遍。</p></header>
+<div class="nav" role="tablist" aria-label="演示模块">
+<button data-tab="flow" aria-selected="true">① 动态绑定逐步运行</button>
+<button data-tab="share" aria-selected="false">② vptr 与 vtable 共享</button>
+<button data-tab="virtual" aria-selected="false">③ virtual 有什么用</button>
+<button data-tab="quiz" aria-selected="false">④ 自测</button>
+</div>
+<section class="panel active" id="flow" role="tabpanel">
+<div class="card">
+<h2>先选实际创建的对象</h2><div class="chooser"><button data-animal="Dog" class="active">new Dog()</button><button data-animal="Cat">new Cat()</button><button data-animal="Animal">new Animal()</button><span class="pill">左边 Animal* 是静态类型，永远不变</span></div>
+<div class="code" id="code">Animal* p = new Dog();&#10;p->speak();</div>
+<div class="grid">
+<div class="box" id="objBox"><div class="hd" id="objTitle">Dog 对象（堆）</div><div class="cell">隐藏的 <b>vptr</b> → <span id="vpTarget">Dog vtable</span></div><div class="cell"><small>其他对象成员：如 name</small></div></div>
+<div class="box"><div class="hd">通常在编译 / 链接阶段准备的类级虚函数表</div><div class="vtables" id="tables"></div></div>
+</div>
+</div>
+<div class="card"><h2>按顺序执行 <code>p->speak()</code></h2>
+<div class="steps" id="steps"></div>
+<div class="detail" id="detail" aria-live="polite"></div>
+<div class="actions"><button id="prev">← 上一步</button><button id="next" class="primary">下一步 →</button><button id="reset">重新开始</button><span class="small" id="stepCount"></span></div>
+<div class="note"><b>关键认知：</b>编译器从 <code>Animal*</code> 和虚函数声明知道“查 <code>speak</code> 的哪个槽位”（本例假定槽位 0）；运行时读取对象 vptr 才知道“去哪张表里查”，然后从同一个槽位取出不同的函数地址。</div>
+</div>
+</section>
+<section class="panel" id="share" role="tabpanel"><div class="card"><h2>为什么 2 只 Dog 只需要 1 张 Dog vtable？</h2>
+<p class="sub">每一个对象都有自己的 vptr；相同动态类型的对象通常共享那一张类级虚函数表。vtable 不会为每个对象重新创建。</p>
+<div class="two"><div><h3>对象级（各有 vptr）</h3>
+<div class="object-row"><div class="object dog"><b>Dog 对象 1</b><br><em>vptr #1</em></div><div class="arrowH">→</div><div class="object dog"><b>Dog vtable</b><br><em>speak → Dog::speak</em></div></div>
+<div class="object-row"><div class="object dog"><b>Dog 对象 2</b><br><em>vptr #2</em></div><div class="arrowH">→</div><div class="object dog"><b>↑ 同一张 Dog vtable</b></div></div>
+<div class="object-row"><div class="object cat"><b>Cat 对象 1</b><br><em>vptr #3</em></div><div class="arrowH">→</div><div class="object cat"><b>Cat vtable</b><br><em>speak → Cat::speak</em></div></div>
+</div><div><h3>你的代码</h3><div class="code">Animal* a = new Dog();&#10;Animal* b = new Dog();&#10;Animal* c = new Cat();</div>
+<div class="highlight">3 个对象 → 通常 3 个 vptr<br>2 种动态类型 → 这些对象使用 2 张 vtable</div>
+<div class="note warning">注意：“2 张”指此处对象涉及的 Dog / Cat 表，不代表程序里不会另有 Animal vtable。</div></div></div></div></section>
+<section class="panel" id="virtual" role="tabpanel"><div class="card"><h2>为什么加 virtual 才是动态绑定？</h2>
+<p class="sub">两个例子只有一个差别：基类的 speak 是否声明为 virtual。通过 <code>Animal*</code> 调用时观察输出。</p>
+<div class="chooser"><button id="withVirtual" class="active">virtual（动态绑定）</button><button id="withoutVirtual">无 virtual（静态绑定）</button></div>
+<div class="code" id="virtualCode"></div>
+<div class="highlight" id="virtualResult"></div>
+<div class="note"><b>有 virtual：</b>经由基类指针 / 引用进行虚调用（且未被显式限定作用域）时，按动态类型选择最终覆写函数。<br><b>无 virtual：</b>同名方法属于隐藏（name hiding），不构成虚函数重写，经 <code>Animal*</code> 调用 <code>Animal::speak()</code>。</div>
+</div></section>
+<section class="panel" id="quiz" role="tabpanel"><div class="card"><h2>三道题，检验是否真正理解</h2>
+<div class="quiz"><h3>Q1：<code>Animal* p = new Dog(); p->speak();</code> 编译器事先确定了什么？</h3>
+<button data-q="1" data-correct="false">确定一定调用 Dog::speak()</button><button data-q="1" data-correct="true">确定 speak 的虚调用槽位</button>
+<h3>Q2：三只 Dog 对象通常有多少个 vptr？它们共享几张 Dog vtable？</h3>
+<button data-q="2" data-correct="true">3 个 vptr / 1 张表</button><button data-q="2" data-correct="false">1 个 vptr / 3 张表</button>
+<h3>Q3：Dog 没有重写 speak，Dog vtable 的对应槽位会怎样？</h3>
+<button data-q="3" data-correct="false">没有这个槽位，无法调用</button><button data-q="3" data-correct="true">可以指向继承来的 Animal::speak</button>
+<p id="quizFeedback" aria-live="polite">点击选项查看反馈。</p></div></div></section>
+<footer class="small" style="margin-top:18px">说明：本页使用常见单继承 ABI 的 vptr / vtable 模型辅助理解。具体内存布局、槽位顺序、地址点因编译器和 ABI 而异；构造／析构阶段及多重继承更复杂。编译器还可能去虚化（devirtualization），直接调用已知目标。C++ 标准规定的是多态语义，而非必须使用虚函数表。</footer>
+</main>
+<script>
+(function(){
+'use strict';
+var kind='Dog',step=0,virtual=true;
+var classNames=['Animal','Dog','Cat'],mapping={'Animal':'Animal','Dog':'Dog','Cat':'Cat'};
+function el(id){return document.getElementById(id)}
+function update(){
+el('code').textContent='Animal* p = new '+kind+'();\np->speak();';
+el('objTitle').textContent=kind+' 对象（堆）';el('vpTarget').textContent=kind+' vtable';
+document.querySelectorAll('[data-animal]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-animal')===kind)});
+var tables=el('tables');tables.innerHTML='';
+classNames.forEach(function(type){
+var t=document.createElement('div');t.className='vt'+(type===kind?' on':'');
+t.innerHTML='<div class="label">'+type+' vtable</div><div class="slot"><strong>slot 0 · speak</strong>'+type+'::speak()</div><div class="slot">其他虚函数槽位…</div>';
+tables.appendChild(t);
+});
+var labels=['编译期','定位对象','读取 vptr','读取槽位 0','执行函数'];
+el('steps').innerHTML=labels.map(function(v,i){return '<div class="step '+(i===step?'current':(i<step?'done':''))+'">'+(i+1)+'. '+v+'</div>'}).join('');
+var text=[
+'<b>编译期：</b>表达式 p 的静态类型是 Animal*；Animal::speak() 是虚函数。编译器生成“进行虚调用、读取 speak 对应固定槽位”的代码（这里用 <b>slot 0</b> 示意）。',
+'<b>运行时：</b>读取 p 保存的地址，找到实际创建的 <b>'+kind+' 对象</b>。普通 Animal* 指针变量自己不带 vptr。',
+'<b>运行时：</b>从 '+kind+' 对象内部读取隐藏的 <b>vptr</b>，由它定位到 <b>'+kind+' vtable</b>。不是从一张所有类型共用的大表寻找某个区域。',
+'<b>运行时：</b>在 '+kind+' vtable 的 <b>slot 0</b> 读取函数指针，得到 <b>'+kind+'::speak()</b> 的地址。<b>槽位固定，表和槽位里的地址随实际对象变化。</b>',
+'<b>运行时：</b>通过取出的函数指针调用 <b>'+kind+'::speak()</b>。最终输出：<span class="success">'+(kind==='Dog'?'Dog barking':kind==='Cat'?'Cat meowing':'Animal speaking')+'</span>。'
+];el('detail').innerHTML=text[step];
+el('prev').disabled=step===0;el('next').disabled=step===4;
+el('stepCount').textContent=(step+1)+' / 5';
+}
+document.querySelectorAll('[data-tab]').forEach(function(btn){btn.addEventListener('click',function(){
+document.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',String(b===btn))});
+document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.id===btn.getAttribute('data-tab'))});
+})});
+document.querySelectorAll('[data-animal]').forEach(function(btn){btn.addEventListener('click',function(){kind=btn.getAttribute('data-animal');step=0;update()})});
+el('prev').addEventListener('click',function(){step=Math.max(0,step-1);update()});
+el('next').addEventListener('click',function(){step=Math.min(4,step+1);update()});
+el('reset').addEventListener('click',function(){step=0;update()});
+function updateVirtual(){
+el('withVirtual').classList.toggle('active',virtual);el('withoutVirtual').classList.toggle('active',!virtual);
+el('virtualCode').textContent='class Animal {\npublic:\n    '+(virtual?'virtual ':'')+'void speak() { cout << "Animal"; }\n};\nclass Dog : public Animal {\npublic:\n    void speak()'+(virtual?' override':'')+' { cout << "Dog"; }\n};\nAnimal* p = new Dog();\np->speak();';
+el('virtualResult').innerHTML=virtual?'有 virtual → <b>Dog</b>（虚调用根据动态类型选择实现）':'无 virtual → <b>Animal</b>（按 Animal* 静态类型确定调用）';
+}
+el('withVirtual').addEventListener('click',function(){virtual=true;updateVirtual()});
+el('withoutVirtual').addEventListener('click',function(){virtual=false;updateVirtual()});
+document.querySelectorAll('.quiz button').forEach(function(b){b.addEventListener('click',function(){
+var q=b.getAttribute('data-q'),ok=b.getAttribute('data-correct')==='true';
+document.querySelectorAll('.quiz button[data-q="'+q+'"]').forEach(function(x){x.classList.remove('yes','no')});
+b.classList.add(ok?'yes':'no');
+el('quizFeedback').textContent=ok?'✅ 正确：'+(['','静态类型确定槽位；动态类型决定实际函数。','同类型的对象各有 vptr，但通常共享一张 vtable。','没有重写时仍可使用基类实现。'][Number(q)]):'❌ 再想一想：查哪个槽位是编译期确定的；选择哪张表取决于运行时对象。';
+})});
+update();updateVirtual();
+})();
+</script></body></html>
